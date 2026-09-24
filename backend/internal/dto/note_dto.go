@@ -12,6 +12,9 @@ type NoteCreateRequest struct {
 	OverallScore float64 `json:"overall_score"`
 	BrewMethod   string  `json:"brew_method" binding:"omitempty,max=64"`
 	BrewRecipeID uint    `json:"brew_recipe_id"`
-	NotesText    string  `json:"notes_text"`
-	ImageURL     string  `json:"image_url" binding:"omitempty,max=255"`
+	// BrewRecipeVersionID optionally pins the exact revision brewed with.
+	// When omitted the recipe's currently active version is snapshotted.
+	BrewRecipeVersionID uint   `json:"brew_recipe_version_id"`
+	NotesText           string `json:"notes_text"`
+	ImageURL            string `json:"image_url" binding:"omitempty,max=255"`
 }

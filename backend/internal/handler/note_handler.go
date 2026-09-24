@@ -17,9 +17,9 @@ import (
 
 // NoteHandler exposes tasting note endpoints.
 type NoteHandler struct {
-	svc    *service.NoteService
+	svc     *service.NoteService
 	likeSvc *service.LikeService
-	logger *slog.Logger
+	logger  *slog.Logger
 }
 
 // NewNoteHandler creates a NoteHandler.
@@ -81,7 +81,8 @@ func (h *NoteHandler) Create(c *gin.Context) {
 		CoffeeName: req.CoffeeName, Origin: req.Origin, RoastLevel: req.RoastLevel,
 		FlavorTags: req.FlavorTags, AromaScore: req.AromaScore, AcidityScore: req.AcidityScore,
 		BodyScore: req.BodyScore, OverallScore: req.OverallScore, BrewMethod: req.BrewMethod,
-		BrewRecipeID: req.BrewRecipeID, NotesText: req.NotesText, ImageURL: req.ImageURL,
+		BrewRecipeID: req.BrewRecipeID, BrewRecipeVersionID: req.BrewRecipeVersionID,
+		NotesText: req.NotesText, ImageURL: req.ImageURL,
 	}
 	created, err := h.svc.Create(middleware.GetUserID(c), n)
 	if err != nil {

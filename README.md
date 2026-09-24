@@ -129,9 +129,12 @@ wje-101/
 | DELETE | /api/v1/comments/:id | 登录 | 删除自己的评论 |
 | POST | /api/v1/notes/:id/like | 登录（限流） | 点赞笔记 |
 | DELETE | /api/v1/notes/:id/like | 登录 | 取消点赞 |
-| GET | /api/v1/recipes | 公开 | 冲煮配方列表/筛选 |
-| GET | /api/v1/recipes/:id | 公开 | 冲煮配方详情 |
-| POST | /api/v1/recipes | 登录（限流） | 分享冲煮配方 |
+| GET | /api/v1/recipes | 公开 | 配方列表/筛选（含各配方当前启用版本参数） |
+| GET | /api/v1/recipes/:id | 公开 | 配方详情（当前启用版本 + 全部版本历史） |
+| GET | /api/v1/recipes/:id/versions/:version | 公开 | 查看指定版本（含已作废版本，供旧笔记核对） |
+| POST | /api/v1/recipes | 登录（限流） | 分享配方，同时生成 v1 |
+| POST | /api/v1/recipes/:id/versions | 登录·仅作者（限流） | 修改配方即发布连续新版本号 |
+| PUT | /api/v1/recipes/:id/active-version | 登录·仅作者 | 指定下一次冲煮使用哪个版本 |
 | GET | /api/v1/beans | 公开 | 咖啡豆库列表/筛选 |
 | POST | /api/v1/beans | admin（限流） | 新增咖啡豆 |
 | PUT | /api/v1/beans/:id | admin | 更新咖啡豆 |
@@ -160,6 +163,13 @@ wje-101/
 - 全局错误处理：`middleware/error_handler.go`、`util/app_error.go`、`constants/error_codes.go`、前端 `utils/request.ts` + `components/common/ErrorToast.vue`
 - 请求日志：`middleware/logger.go`（request_id/method/path/status/latency_ms）
 - 文件上传：`handler/upload_handler.go`、`util/file.go`、`components/common/ImageUploader.vue`、Nginx `/uploads/` 代理
+
+## 配方版本化说明
+
+- 配方参数（水温/研磨度/粉水比/步骤）只存于版本表 `brew_recipe_versions`，每次修改都生成下一连续版本号，`(recipe_id, version_number)` 唯一约束 + 行锁保证版本号不重复、不跳号。
+- 版本有 `active`（下次使用）/`deprecated`（已作废）两种状态；作者发布新版本或重新指定启用版本时，旧版本仅标记作废、永不删除，仍可通过版本接口查看。
+- 发布品鉴笔记时固化当时采用的配方名称、水温、步骤与版本号快照（`tasting_notes.recipe_*_snapshot`），配方后续改版不影响任何旧笔记；笔记也可显式指定按某个（含已作废）版本冲煮。
+- 仅配方作者可发布新版本或切换启用版本，服务层强制校验归属。
 
 ## License
 

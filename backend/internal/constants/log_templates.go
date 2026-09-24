@@ -18,6 +18,8 @@ const (
 	LogRecipeCreateSuccess    = "brew recipe created: name=%s"
 	LogRecipeCreateFailed     = "brew recipe create failed: name=%s"
 	LogRecipeListSuccess      = "brew recipe list success: device=%s"
+	LogRecipeVersionPublished = "brew recipe version published"
+	LogRecipeActiveVersionSet = "brew recipe active version changed"
 	LogBeanCreateSuccess      = "coffee bean created: name=%s"
 	LogBeanCreateFailed       = "coffee bean create failed: name=%s"
 	LogBeanUpdateSuccess      = "coffee bean updated: id=%d"

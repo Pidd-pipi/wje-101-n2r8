@@ -23,15 +23,31 @@
             <el-button v-if="isOwner" type="danger" plain @click="remove">删除</el-button>
           </div>
         </el-card>
-        <el-card v-if="recipe" class="block">
-          <template #header>关联配方：{{ recipe.name }}</template>
-          <p>{{ recipe.device }} · {{ recipe.water_temp }}°C · {{ recipe.grind_size }} · 粉水比 {{ recipe.ratio }}</p>
+        <!-- 配方数据为发笔记时固化的快照，配方后续改版不会影响这里 -->
+        <el-card v-if="note.brew_recipe_id" class="block">
+          <template #header>
+            关联配方：{{ note.recipe_name_snapshot || '（未命名）' }}
+            <el-tag size="small" type="info" effect="plain">v{{ note.recipe_version_snapshot }}</el-tag>
+            <el-button v-if="canViewCurrent" link type="primary" size="small" @click="openCurrent">查看配方当前版本</el-button>
+          </template>
+          <p class="snap-hint">以下为本次冲煮时采用的数据</p>
+          <p>水温 {{ note.recipe_temp_snapshot }}°C</p>
           <ol>
             <li v-for="s in steps" :key="s.step_number">
               第{{ s.step_number }}步：{{ s.description }}（{{ s.duration_seconds }}s）
             </li>
           </ol>
         </el-card>
+        <el-dialog v-model="currentVisible" :title="`配方最新状态：${current?.recipe.name ?? ''}`" width="560px">
+          <template v-if="current">
+            <p v-if="current.active_version">
+              当前启用版本：<el-tag size="small">v{{ current.active_version.version_number }}</el-tag>
+              · {{ current.active_version.water_temp }}°C · {{ current.active_version.grind_size }} · 粉水比 {{ current.active_version.ratio }}
+            </p>
+            <el-alert v-if="note.recipe_version_snapshot !== current.recipe.current_version" type="warning" :closable="false"
+              :title="`本笔记冲煮时使用的是 v${note.recipe_version_snapshot}，配方现已有 v${current.recipe.current_version}，上方记录保持不变。`" />
+          </template>
+        </el-dialog>
       </el-col>
       <el-col :xs="24" :md="10">
         <el-card>
@@ -61,7 +77,7 @@ import { getNote, listComments, createComment, likeNote, unlikeNote, deleteNote 
 import { getRecipe } from '@/api/recipe'
 import { useAuth } from '@/hooks/useAuth'
 import { RoastLevelMap, type TastingNote } from '@/constants/note'
-import type { Comment, BrewRecipe, RecipeStep } from '@/types/api'
+import type { Comment, RecipeStep, RecipeDetail } from '@/types/api'
 import { formatDateTime } from '@/utils/dateFormat'
 
 const route = useRoute()
@@ -74,15 +90,17 @@ const liking = ref(false)
 const comments = ref<Comment[]>([])
 const reply = ref('')
 const replying = ref(false)
-const recipe = ref<BrewRecipe | null>(null)
+const currentVisible = ref(false)
+const current = ref<RecipeDetail | null>(null)
 
 const steps = computed<RecipeStep[]>(() => {
   try {
-    return JSON.parse(recipe.value?.steps || '[]')
+    return JSON.parse(note.value?.recipe_steps_snapshot || '[]')
   } catch {
     return []
   }
 })
+const canViewCurrent = computed(() => !!note.value?.brew_recipe_id)
 const isOwner = computed(() => !!user.value && note.value?.user_id === user.value.id)
 
 onMounted(async () => {
@@ -91,14 +109,13 @@ onMounted(async () => {
   note.value = res.note
   likeCount.value = res.like_count
   comments.value = await listComments(res.note.id)
-  if (res.note.brew_recipe_id) {
-    try {
-      recipe.value = await getRecipe(res.note.brew_recipe_id)
-    } catch {
-      recipe.value = null
-    }
-  }
 })
+
+async function openCurrent() {
+  if (!note.value?.brew_recipe_id) return
+  current.value = await getRecipe(note.value.brew_recipe_id)
+  currentVisible.value = true
+}
 
 async function toggleLike() {
   if (!isLoggedIn.value) {
@@ -154,6 +171,7 @@ async function remove() {
 .notes { line-height: 1.8; margin-top: 12px; }
 .actions { margin-top: 16px; display: flex; gap: 12px; }
 .block { margin-top: 16px; }
+.snap-hint { color: #e6a23c; font-size: 12px; margin: 0 0 8px; }
 .comment { border-bottom: 1px solid #f0f0f0; padding: 10px 0; }
 .c-head { color: #999; font-size: 12px; }
 .reply { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }

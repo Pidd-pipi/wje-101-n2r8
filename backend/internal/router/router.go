@@ -25,8 +25,8 @@ func Setup(cfg *config.Config, db *gorm.DB, logger *slog.Logger) *gin.Engine {
 	followRepo := repository.NewUserFollowRepository(db)
 
 	userService := service.NewUserService(userRepo, logger, cfg)
-	noteService := service.NewNoteService(noteRepo, logger)
 	recipeService := service.NewRecipeService(recipeRepo, logger)
+	noteService := service.NewNoteService(noteRepo, recipeService, logger)
 	beanService := service.NewBeanService(beanRepo, logger)
 	commentService := service.NewCommentService(commentRepo, noteRepo, logger)
 	likeService := service.NewLikeService(likeRepo, noteRepo, logger)

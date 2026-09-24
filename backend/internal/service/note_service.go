@@ -11,18 +11,29 @@ import (
 	"github.com/wjecoffeetaste/wjecoffeetaste/internal/util"
 )
 
+// RecipeVersionResolver resolves the recipe version a note is brewed with.
+// Implemented by RecipeService; declared here to keep services decoupled.
+type RecipeVersionResolver interface {
+	ResolveVersionForNote(recipeID, versionID uint) (*model.BrewRecipeVersion, error)
+	Get(id uint) (*model.BrewRecipe, error)
+}
+
 // NoteService handles tasting notes.
 type NoteService struct {
-	repo   *repository.TastingNoteRepository
-	logger *slog.Logger
+	repo           *repository.TastingNoteRepository
+	recipeResolver RecipeVersionResolver
+	logger         *slog.Logger
 }
 
 // NewNoteService creates a NoteService.
-func NewNoteService(repo *repository.TastingNoteRepository, logger *slog.Logger) *NoteService {
-	return &NoteService{repo: repo, logger: logger}
+func NewNoteService(repo *repository.TastingNoteRepository, recipeResolver RecipeVersionResolver, logger *slog.Logger) *NoteService {
+	return &NoteService{repo: repo, recipeResolver: recipeResolver, logger: logger}
 }
 
-// Create adds a note for a user.
+// Create adds a note for a user. When the note references a recipe, the
+// version in effect at brew time is resolved and its name/water
+// temperature/steps are snapshotted onto the note so future recipe
+// revisions never change the historical record.
 func (s *NoteService) Create(userID uint, n *model.TastingNote) (*model.TastingNote, error) {
 	if !constants.IsValidRoastLevel(n.RoastLevel) {
 		return nil, util.NewAppError(422, constants.CodeValidationError,
@@ -31,6 +42,21 @@ func (s *NoteService) Create(userID uint, n *model.TastingNote) (*model.TastingN
 	n.UserID = userID
 	if n.FlavorTags == "" {
 		n.FlavorTags = "[]"
+	}
+	if n.BrewRecipeID != 0 && s.recipeResolver != nil {
+		rec, err := s.recipeResolver.Get(n.BrewRecipeID)
+		if err != nil {
+			return nil, err
+		}
+		ver, err := s.recipeResolver.ResolveVersionForNote(n.BrewRecipeID, n.BrewRecipeVersionID)
+		if err != nil {
+			return nil, err
+		}
+		n.BrewRecipeVersionID = ver.ID
+		n.RecipeNameSnapshot = rec.Name
+		n.RecipeTempSnapshot = ver.WaterTemp
+		n.RecipeStepsSnapshot = ver.Steps
+		n.RecipeVersionSnap = ver.VersionNumber
 	}
 	if err := s.repo.Create(n); err != nil {
 		s.logger.Error(fmt.Sprintf(constants.LogNoteCreateFailed, n.CoffeeName), "error", err)
