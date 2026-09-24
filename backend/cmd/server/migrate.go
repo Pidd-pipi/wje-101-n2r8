@@ -14,6 +14,7 @@ func migrate(db *gorm.DB) error {
 		&model.User{},
 		&model.TastingNote{},
 		&model.BrewRecipe{},
+		&model.RecipeVersion{},
 		&model.CoffeeBean{},
 		&model.Comment{},
 		&model.Like{},
@@ -64,9 +65,32 @@ func seed(db *gorm.DB) error {
 		return err
 	}
 
+	// Each recipe gets an immutable v1 snapshot, which is also its current
+	// version. The mirrored recipe columns stay in sync.
+	versionDefs := []model.RecipeVersion{
+		{
+			RecipeID: recipes[0].ID, VersionNumber: 1, Status: "active",
+			Name: recipes[0].Name, Device: recipes[0].Device, WaterTemp: recipes[0].WaterTemp,
+			GrindSize: recipes[0].GrindSize, Ratio: recipes[0].Ratio, Steps: recipes[0].Steps,
+		},
+		{
+			RecipeID: recipes[1].ID, VersionNumber: 1, Status: "active",
+			Name: recipes[1].Name, Device: recipes[1].Device, WaterTemp: recipes[1].WaterTemp,
+			GrindSize: recipes[1].GrindSize, Ratio: recipes[1].Ratio, Steps: recipes[1].Steps,
+		},
+	}
+	if err := db.Create(&versionDefs).Error; err != nil {
+		return err
+	}
+	for i := range recipes {
+		if err := db.Model(&recipes[i]).Update("current_version_id", versionDefs[i].ID).Error; err != nil {
+			return err
+		}
+	}
+
 	notes := []model.TastingNote{
-		{UserID: user.ID, CoffeeName: "埃塞俄比亚耶加雪菲", Origin: "埃塞俄比亚", RoastLevel: "light", FlavorTags: `["柑橘","茉莉"]`, AromaScore: 8.5, AcidityScore: 8.0, BodyScore: 7.0, OverallScore: 8.3, BrewMethod: "手冲", BrewRecipeID: recipes[0].ID, NotesText: "花香明显，柑橘酸质明亮，回甘持久。", ImageURL: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600"},
-		{UserID: user2.ID, CoffeeName: "哥伦比亚慧兰", Origin: "哥伦比亚", RoastLevel: "medium", FlavorTags: `["坚果","焦糖"]`, AromaScore: 7.5, AcidityScore: 6.8, BodyScore: 7.8, OverallScore: 7.6, BrewMethod: "法压", BrewRecipeID: recipes[1].ID, NotesText: "甜感平衡，坚果香气浓郁。", ImageURL: "https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=600"},
+		{UserID: user.ID, CoffeeName: "埃塞俄比亚耶加雪菲", Origin: "埃塞俄比亚", RoastLevel: "light", FlavorTags: `["柑橘","茉莉"]`, AromaScore: 8.5, AcidityScore: 8.0, BodyScore: 7.0, OverallScore: 8.3, BrewMethod: "手冲", BrewRecipeID: recipes[0].ID, BrewRecipeVersionID: versionDefs[0].ID, BrewRecipeName: versionDefs[0].Name, BrewRecipeWaterTemp: versionDefs[0].WaterTemp, BrewRecipeSteps: versionDefs[0].Steps, NotesText: "花香明显，柑橘酸质明亮，回甘持久。", ImageURL: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600"},
+		{UserID: user2.ID, CoffeeName: "哥伦比亚慧兰", Origin: "哥伦比亚", RoastLevel: "medium", FlavorTags: `["坚果","焦糖"]`, AromaScore: 7.5, AcidityScore: 6.8, BodyScore: 7.8, OverallScore: 7.6, BrewMethod: "法压", BrewRecipeID: recipes[1].ID, BrewRecipeVersionID: versionDefs[1].ID, BrewRecipeName: versionDefs[1].Name, BrewRecipeWaterTemp: versionDefs[1].WaterTemp, BrewRecipeSteps: versionDefs[1].Steps, NotesText: "甜感平衡，坚果香气浓郁。", ImageURL: "https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=600"},
 		{UserID: user.ID, CoffeeName: "哥斯达黎加蜜处理", Origin: "哥斯达黎加", RoastLevel: "medium", FlavorTags: `["莓果","红糖"]`, AromaScore: 8.0, AcidityScore: 7.2, BodyScore: 8.0, OverallScore: 7.9, BrewMethod: "手冲", NotesText: "莓果酸甜与红糖甜感交织。", ImageURL: "https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=600"},
 	}
 	if err := db.Create(&notes).Error; err != nil {

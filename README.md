@@ -129,9 +129,12 @@ wje-101/
 | DELETE | /api/v1/comments/:id | 登录 | 删除自己的评论 |
 | POST | /api/v1/notes/:id/like | 登录（限流） | 点赞笔记 |
 | DELETE | /api/v1/notes/:id/like | 登录 | 取消点赞 |
-| GET | /api/v1/recipes | 公开 | 冲煮配方列表/筛选 |
-| GET | /api/v1/recipes/:id | 公开 | 冲煮配方详情 |
-| POST | /api/v1/recipes | 登录（限流） | 分享冲煮配方 |
+| GET | /api/v1/recipes | 公开 | 冲煮配方列表/筛选（含当前版本号） |
+| GET | /api/v1/recipes/:id | 公开 | 冲煮配方详情（含完整版本历史） |
+| POST | /api/v1/recipes | 登录（限流） | 分享冲煮配方（自动生成 v1） |
+| POST | /api/v1/recipes/:id/versions | 登录·作者（限流） | 发布新版本（连续递增，自动成为当前版本） |
+| PUT | /api/v1/recipes/:id/current-version | 登录·作者 | 指定下一次使用的版本 |
+| PUT | /api/v1/recipes/:id/versions/:versionNumber/status | 登录·作者 | 作废/恢复版本（作废后旧笔记仍可核对） |
 | GET | /api/v1/beans | 公开 | 咖啡豆库列表/筛选 |
 | POST | /api/v1/beans | admin（限流） | 新增咖啡豆 |
 | PUT | /api/v1/beans/:id | admin | 更新咖啡豆 |

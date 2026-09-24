@@ -17,9 +17,9 @@ import (
 
 // NoteHandler exposes tasting note endpoints.
 type NoteHandler struct {
-	svc    *service.NoteService
+	svc     *service.NoteService
 	likeSvc *service.LikeService
-	logger *slog.Logger
+	logger  *slog.Logger
 }
 
 // NewNoteHandler creates a NoteHandler.
@@ -67,7 +67,11 @@ func (h *NoteHandler) Get(c *gin.Context) {
 		return
 	}
 	likes, _ := h.likeSvc.CountByNote(n.ID)
-	c.JSON(http.StatusOK, dto.OK(gin.H{"note": n, "like_count": likes}))
+	c.JSON(http.StatusOK, dto.OK(gin.H{
+		"note":            n,
+		"like_count":      likes,
+		"recipe_snapshot": h.svc.RecipeSnapshot(n),
+	}))
 }
 
 // Create handles POST /notes.

@@ -10,7 +10,46 @@ export interface BrewRecipe {
   grind_size: string
   ratio: string
   steps: string
+  current_version_id: number
+  current_version_number?: number
   created_at: string
+}
+
+export type RecipeVersionStatus = 'active' | 'deprecated'
+
+export interface RecipeVersion {
+  id: number
+  recipe_id: number
+  version_number: number
+  status: RecipeVersionStatus
+  name: string
+  device: string
+  water_temp: number
+  grind_size: string
+  ratio: string
+  steps: string
+  created_at: string
+  is_current: boolean
+}
+
+export interface RecipeDetail extends BrewRecipe {
+  versions: RecipeVersion[]
+}
+
+// Snapshot frozen on a tasting note at publish time; always reflects the
+// exact brew, even if the recipe has newer/deprecated versions since.
+export interface RecipeSnapshot {
+  recipe_id: number
+  version_id: number
+  version_number: number
+  name: string
+  device: string
+  water_temp: number
+  grind_size: string
+  ratio: string
+  steps: string
+  status: string
+  deprecated: boolean
 }
 
 export interface Comment {

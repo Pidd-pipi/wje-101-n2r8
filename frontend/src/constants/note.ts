@@ -21,6 +21,10 @@ export interface TastingNote {
   overall_score: number
   brew_method: string
   brew_recipe_id: number
+  brew_recipe_version_id: number
+  brew_recipe_name: string
+  brew_recipe_water_temp: number
+  brew_recipe_steps: string
   notes_text: string
   image_url: string
   created_at: string

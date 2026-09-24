@@ -23,9 +23,22 @@
             <el-button v-if="isOwner" type="danger" plain @click="remove">删除</el-button>
           </div>
         </el-card>
-        <el-card v-if="recipe" class="block">
-          <template #header>关联配方：{{ recipe.name }}</template>
-          <p>{{ recipe.device }} · {{ recipe.water_temp }}°C · {{ recipe.grind_size }} · 粉水比 {{ recipe.ratio }}</p>
+        <el-card v-if="recipeSnapshot" class="block">
+          <template #header>
+            <div class="recipe-head">
+              <router-link :to="`/recipes/${recipeSnapshot.recipe_id}`" class="recipe-link">
+                关联配方：{{ recipeSnapshot.name }}
+              </router-link>
+              <el-tag size="small" type="info">
+                v{{ recipeSnapshot.version_number || '?' }}
+              </el-tag>
+              <el-tag v-if="recipeSnapshot.deprecated" size="small" type="warning">已作废版本</el-tag>
+              <el-tag v-else-if="recipeSnapshot.status === 'unknown'" size="small" type="info">版本记录缺失</el-tag>
+              <el-tag v-else-if="recipeSnapshot.status === 'legacy'" size="small" type="info">历史数据</el-tag>
+            </div>
+          </template>
+          <p class="snap-tip">以下为本次冲煮时采用的数据，不会随配方更新而变化。</p>
+          <p>{{ recipeSnapshot.device || '-' }} · {{ recipeSnapshot.water_temp }}°C · {{ recipeSnapshot.grind_size || '-' }} · 粉水比 {{ recipeSnapshot.ratio || '-' }}</p>
           <ol>
             <li v-for="s in steps" :key="s.step_number">
               第{{ s.step_number }}步：{{ s.description }}（{{ s.duration_seconds }}s）
@@ -58,10 +71,9 @@ import { ElMessage } from 'element-plus'
 import ScoreStars from '@/components/common/ScoreStars.vue'
 import FlavorTags from '@/components/common/FlavorTags.vue'
 import { getNote, listComments, createComment, likeNote, unlikeNote, deleteNote } from '@/api/note'
-import { getRecipe } from '@/api/recipe'
 import { useAuth } from '@/hooks/useAuth'
 import { RoastLevelMap, type TastingNote } from '@/constants/note'
-import type { Comment, BrewRecipe, RecipeStep } from '@/types/api'
+import type { Comment, RecipeSnapshot, RecipeStep } from '@/types/api'
 import { formatDateTime } from '@/utils/dateFormat'
 
 const route = useRoute()
@@ -74,11 +86,11 @@ const liking = ref(false)
 const comments = ref<Comment[]>([])
 const reply = ref('')
 const replying = ref(false)
-const recipe = ref<BrewRecipe | null>(null)
+const recipeSnapshot = ref<RecipeSnapshot | null>(null)
 
 const steps = computed<RecipeStep[]>(() => {
   try {
-    return JSON.parse(recipe.value?.steps || '[]')
+    return JSON.parse(recipeSnapshot.value?.steps || '[]')
   } catch {
     return []
   }
@@ -90,14 +102,8 @@ onMounted(async () => {
   const res = await getNote(id)
   note.value = res.note
   likeCount.value = res.like_count
+  recipeSnapshot.value = res.recipe_snapshot
   comments.value = await listComments(res.note.id)
-  if (res.note.brew_recipe_id) {
-    try {
-      recipe.value = await getRecipe(res.note.brew_recipe_id)
-    } catch {
-      recipe.value = null
-    }
-  }
 })
 
 async function toggleLike() {
@@ -154,6 +160,9 @@ async function remove() {
 .notes { line-height: 1.8; margin-top: 12px; }
 .actions { margin-top: 16px; display: flex; gap: 12px; }
 .block { margin-top: 16px; }
+.recipe-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.recipe-link { color: var(--el-color-primary); text-decoration: none; font-weight: 600; }
+.snap-tip { color: #999; font-size: 12px; margin: 0 0 8px; }
 .comment { border-bottom: 1px solid #f0f0f0; padding: 10px 0; }
 .c-head { color: #999; font-size: 12px; }
 .reply { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }

@@ -15,3 +15,20 @@ type NoteCreateRequest struct {
 	NotesText    string  `json:"notes_text"`
 	ImageURL     string  `json:"image_url" binding:"omitempty,max=255"`
 }
+
+// RecipeSnapshotResponse carries the exact recipe data a note was brewed with.
+// Name/water_temp/steps come from the snapshot frozen at publish time;
+// status/version_number are resolved live so deprecated versions are flagged.
+type RecipeSnapshotResponse struct {
+	RecipeID      uint   `json:"recipe_id"`
+	VersionID     uint   `json:"version_id"`
+	VersionNumber int    `json:"version_number"`
+	Name          string `json:"name"`
+	Device        string `json:"device"`
+	WaterTemp     int    `json:"water_temp"`
+	GrindSize     string `json:"grind_size"`
+	Ratio         string `json:"ratio"`
+	Steps         string `json:"steps"`
+	Status        string `json:"status"`
+	Deprecated    bool   `json:"deprecated"`
+}

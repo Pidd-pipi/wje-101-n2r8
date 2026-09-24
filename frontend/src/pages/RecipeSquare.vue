@@ -13,13 +13,20 @@
     <el-row :gutter="16">
       <el-col v-for="r in recipes" :key="r.id" :xs="24" :sm="12" :md="8">
         <el-card class="recipe-card" shadow="hover">
-          <h3>{{ r.name }} <el-tag size="small">{{ r.device }}</el-tag></h3>
-          <div class="meta">{{ r.water_temp }}°C · {{ r.grind_size }} · 粉水比 {{ r.ratio }}</div>
-          <ol>
-            <li v-for="s in stepsOf(r)" :key="s.step_number">
-              第{{ s.step_number }}步：{{ s.description }}（{{ s.duration_seconds }}s）
-            </li>
-          </ol>
+          <router-link :to="`/recipes/${r.id}`" class="card-link">
+            <h3>
+              {{ r.name }}
+              <el-tag size="small">{{ r.device }}</el-tag>
+              <el-tag size="small" type="success">当前 v{{ currentVersionNumber(r) }}</el-tag>
+            </h3>
+            <div class="meta">{{ r.water_temp }}°C · {{ r.grind_size }} · 粉水比 {{ r.ratio }}</div>
+            <ol class="card-steps">
+              <li v-for="s in stepsOf(r)" :key="s.step_number">
+                第{{ s.step_number }}步：{{ s.description }}（{{ s.duration_seconds }}s）
+              </li>
+            </ol>
+            <div class="card-foot">查看版本历史与管理 →</div>
+          </router-link>
         </el-card>
       </el-col>
     </el-row>
@@ -86,6 +93,9 @@ function stepsOf(r: BrewRecipe): RecipeStep[] {
     return []
   }
 }
+function currentVersionNumber(r: BrewRecipe): string {
+  return r.current_version_number ? String(r.current_version_number) : '?'
+}
 async function addRecipe() {
   if (!addForm.name) {
     ElMessage.warning('请填写配方名称')
@@ -101,5 +111,9 @@ async function addRecipe() {
 <style scoped>
 .page { max-width: 1200px; margin: 0 auto; }
 .recipe-card { margin-bottom: 16px; }
+.card-link { text-decoration: none; color: inherit; display: block; }
+.card-link:hover h3 { color: var(--el-color-primary); }
+.card-steps { margin: 6px 0; }
+.card-foot { margin-top: 8px; color: var(--el-color-primary); font-size: 12px; }
 .meta { color: #999; font-size: 12px; margin: 6px 0; }
 </style>

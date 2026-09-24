@@ -27,6 +27,10 @@ CREATE TABLE IF NOT EXISTS tasting_notes (
   overall_score DOUBLE PRECISION DEFAULT 0,
   brew_method VARCHAR(64),
   brew_recipe_id BIGINT DEFAULT 0,
+  brew_recipe_version_id BIGINT DEFAULT 0,
+  brew_recipe_name VARCHAR(128) DEFAULT '',
+  brew_recipe_water_temp INT DEFAULT 0,
+  brew_recipe_steps JSONB DEFAULT '[]',
   notes_text TEXT,
   image_url VARCHAR(255),
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -43,9 +47,29 @@ CREATE TABLE IF NOT EXISTS brew_recipes (
   grind_size VARCHAR(32),
   ratio VARCHAR(32),
   steps JSONB DEFAULT '[]',
+  current_version_id BIGINT DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT fk_recipe_user FOREIGN KEY (user_id) REFERENCES users(id)
 );
+
+-- 配方版本：内容不可变，仅 status 可在 active/deprecated 间切换；
+-- 作废版本保留以供旧笔记核对。(recipe_id, version_number) 唯一保证版本号不重复。
+CREATE TABLE IF NOT EXISTS recipe_versions (
+  id BIGSERIAL PRIMARY KEY,
+  recipe_id BIGINT NOT NULL,
+  version_number INT NOT NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'active',
+  name VARCHAR(128) NOT NULL,
+  device VARCHAR(64),
+  water_temp INT DEFAULT 0,
+  grind_size VARCHAR(32),
+  ratio VARCHAR(32),
+  steps JSONB DEFAULT '[]',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT fk_recipe_version_recipe FOREIGN KEY (recipe_id) REFERENCES brew_recipes(id),
+  CONSTRAINT uniq_recipe_version_number UNIQUE (recipe_id, version_number)
+);
+CREATE INDEX IF NOT EXISTS idx_recipe_versions_recipe ON recipe_versions(recipe_id);
 
 CREATE TABLE IF NOT EXISTS coffee_beans (
   id BIGSERIAL PRIMARY KEY,
@@ -95,14 +119,20 @@ INSERT INTO coffee_beans (name, origin, process_method, flavor_tags, description
   ('哥斯达黎加蜜处理', '哥斯达黎加', 'honey', '["莓果","红糖","葡萄干"]', '蜜处理带来醇厚甜感与莓果香气。'),
   ('印尼曼特宁', '印度尼西亚', 'washed', '["草本","黑巧克力","香料"]', '醇厚浓郁，草本与黑巧风味。');
 
-INSERT INTO brew_recipes (user_id, name, device, water_temp, grind_size, ratio, steps) VALUES
-  (2, '手冲三段式', '手冲壶', 92, '中细', '1:15', '[{"step_number":1,"description":"闷蒸30秒","duration_seconds":30},{"step_number":2,"description":"第一段注水至150ml","duration_seconds":20},{"step_number":3,"description":"第二段注水至300ml","duration_seconds":30}]'),
-  (3, '法压壶经典', '法压壶', 94, '中粗', '1:14', '[{"step_number":1,"description":"注水并搅拌","duration_seconds":10},{"step_number":2,"description":"浸泡4分钟","duration_seconds":240},{"step_number":3,"description":"缓慢压杆","duration_seconds":15}]');
+INSERT INTO brew_recipes (id, user_id, name, device, water_temp, grind_size, ratio, steps, current_version_id) VALUES
+  (1, 2, '手冲三段式', '手冲壶', 92, '中细', '1:15', '[{"step_number":1,"description":"闷蒸30秒","duration_seconds":30},{"step_number":2,"description":"第一段注水至150ml","duration_seconds":20},{"step_number":3,"description":"第二段注水至300ml","duration_seconds":30}]', 1),
+  (2, 3, '法压壶经典', '法压壶', 94, '中粗', '1:14', '[{"step_number":1,"description":"注水并搅拌","duration_seconds":10},{"step_number":2,"description":"浸泡4分钟","duration_seconds":240},{"step_number":3,"description":"缓慢压杆","duration_seconds":15}]', 2);
+SELECT setval(pg_get_serial_sequence('brew_recipes', 'id'), (SELECT MAX(id) FROM brew_recipes));
 
-INSERT INTO tasting_notes (user_id, coffee_name, origin, roast_level, flavor_tags, aroma_score, acidity_score, body_score, overall_score, brew_method, brew_recipe_id, notes_text, image_url) VALUES
-  (2, '埃塞俄比亚耶加雪菲', '埃塞俄比亚', 'light', '["柑橘","茉莉"]', 8.5, 8.0, 7.0, 8.3, '手冲', 1, '花香明显，柑橘酸质明亮，回甘持久。', 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600'),
-  (3, '哥伦比亚慧兰', '哥伦比亚', 'medium', '["坚果","焦糖"]', 7.5, 6.8, 7.8, 7.6, '法压', 2, '甜感平衡，坚果香气浓郁。', 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=600'),
-  (2, '哥斯达黎加蜜处理', '哥斯达黎加', 'medium', '["莓果","红糖"]', 8.0, 7.2, 8.0, 7.9, '手冲', 0, '莓果酸甜与红糖甜感交织。', 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=600');
+INSERT INTO recipe_versions (id, recipe_id, version_number, status, name, device, water_temp, grind_size, ratio, steps) VALUES
+  (1, 1, 1, 'active', '手冲三段式', '手冲壶', 92, '中细', '1:15', '[{"step_number":1,"description":"闷蒸30秒","duration_seconds":30},{"step_number":2,"description":"第一段注水至150ml","duration_seconds":20},{"step_number":3,"description":"第二段注水至300ml","duration_seconds":30}]'),
+  (2, 2, 1, 'active', '法压壶经典', '法压壶', 94, '中粗', '1:14', '[{"step_number":1,"description":"注水并搅拌","duration_seconds":10},{"step_number":2,"description":"浸泡4分钟","duration_seconds":240},{"step_number":3,"description":"缓慢压杆","duration_seconds":15}]');
+SELECT setval(pg_get_serial_sequence('recipe_versions', 'id'), (SELECT MAX(id) FROM recipe_versions));
+
+INSERT INTO tasting_notes (user_id, coffee_name, origin, roast_level, flavor_tags, aroma_score, acidity_score, body_score, overall_score, brew_method, brew_recipe_id, brew_recipe_version_id, brew_recipe_name, brew_recipe_water_temp, brew_recipe_steps, notes_text, image_url) VALUES
+  (2, '埃塞俄比亚耶加雪菲', '埃塞俄比亚', 'light', '["柑橘","茉莉"]', 8.5, 8.0, 7.0, 8.3, '手冲', 1, 1, '手冲三段式', 92, '[{"step_number":1,"description":"闷蒸30秒","duration_seconds":30},{"step_number":2,"description":"第一段注水至150ml","duration_seconds":20},{"step_number":3,"description":"第二段注水至300ml","duration_seconds":30}]', '花香明显，柑橘酸质明亮，回甘持久。', 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600'),
+  (3, '哥伦比亚慧兰', '哥伦比亚', 'medium', '["坚果","焦糖"]', 7.5, 6.8, 7.8, 7.6, '法压', 2, 2, '法压壶经典', 94, '[{"step_number":1,"description":"注水并搅拌","duration_seconds":10},{"step_number":2,"description":"浸泡4分钟","duration_seconds":240},{"step_number":3,"description":"缓慢压杆","duration_seconds":15}]', '甜感平衡，坚果香气浓郁。', 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=600'),
+  (2, '哥斯达黎加蜜处理', '哥斯达黎加', 'medium', '["莓果","红糖"]', 8.0, 7.2, 8.0, 7.9, '手冲', 0, 0, '', 0, '[]', '莓果酸甜与红糖甜感交织。', 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=600');
 
 INSERT INTO comments (note_id, user_id, content) VALUES
   (1, 3, '我也很喜欢这只耶加雪菲，柑橘调太棒了！'),

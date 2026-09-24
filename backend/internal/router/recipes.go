@@ -13,4 +13,11 @@ func registerRecipeRoutes(v1 *gin.RouterGroup, cfg *config.Config, h *handler.Re
 	recipes.GET("", h.List)
 	recipes.GET("/:id", h.Get)
 	recipes.POST("", middleware.AuthRequired(cfg), limiter.Limit(), h.Create)
+
+	// Recipe versions: only the recipe author may publish a new version,
+	// choose the current version, or deprecate/restore a version (ownership
+	// is enforced in the service).
+	recipes.POST("/:id/versions", middleware.AuthRequired(cfg), limiter.Limit(), h.AddVersion)
+	recipes.PUT("/:id/current-version", middleware.AuthRequired(cfg), h.SetCurrentVersion)
+	recipes.PUT("/:id/versions/:versionNumber/status", middleware.AuthRequired(cfg), h.SetVersionStatus)
 }

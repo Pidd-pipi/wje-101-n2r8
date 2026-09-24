@@ -22,9 +22,15 @@
       <el-form-item label="综合分"><el-rate v-model="form.overall_score" :max="10" show-score /></el-form-item>
       <el-form-item label="冲煮方式"><el-input v-model="form.brew_method" placeholder="如：手冲" /></el-form-item>
       <el-form-item label="关联配方">
-        <el-select v-model="form.brew_recipe_id" clearable placeholder="选择冲煮配方" style="width: 320px">
-          <el-option v-for="r in recipes" :key="r.id" :label="`${r.name}（${r.device}）`" :value="r.id" />
+        <el-select v-model="form.brew_recipe_id" clearable placeholder="选择冲煮配方" style="width: 360px">
+          <el-option
+            v-for="r in recipes"
+            :key="r.id"
+            :label="`${r.name}（${r.device} · 当前 v${r.current_version_number || '?'}）`"
+            :value="r.id"
+          />
         </el-select>
+        <div class="tip">发布时将固化该配方当前版本的名称、水温与步骤，之后配方更新不会影响本笔记。</div>
       </el-form-item>
       <el-form-item label="品鉴笔记"><el-input v-model="form.notes_text" type="textarea" :rows="4" /></el-form-item>
       <el-form-item label="配图"><ImageUploader v-model="form.image_url" /></el-form-item>
@@ -97,4 +103,5 @@ async function submit() {
 <style scoped>
 .page { max-width: 720px; margin: 0 auto; }
 .form { margin-top: 16px; }
+.tip { color: #999; font-size: 12px; margin-top: 4px; line-height: 1.5; }
 </style>
